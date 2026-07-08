@@ -55,7 +55,7 @@ runs:
         set +e
         OUTPUT=$(llm-prompt-radar \
           --repo "${{ inputs.repo }}" \
-          --base-ref "${{ inputs.base-ref }}" \
+          --base "${{ inputs.base-ref }}" \
           --format "${{ inputs.format }}" \
           --fail-on "${{ inputs.fail-on }}" \
           ${{ inputs.badge == 'true' && '--badge' || '' }})

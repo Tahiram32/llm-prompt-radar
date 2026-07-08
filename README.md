@@ -50,13 +50,9 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0          # full history required for diffing
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
 
       - uses: Tahiram32/llm-prompt-radar@v0.1.0
         with:
@@ -72,10 +68,10 @@ jobs:
 pip install llm-prompt-radar
 
 # Analyse uncommitted changes vs. main
-llm-prompt-radar --base-ref origin/main
+llm-prompt-radar --base origin/main
 
 # Analyse a specific repo with JSON output
-llm-prompt-radar --repo /path/to/repo --format json --fail-on medium
+llm-prompt-radar --repo /path/to/repo --base origin/main --format json --fail-on medium
 
 # Get full help
 llm-prompt-radar --help
