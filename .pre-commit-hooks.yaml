@@ -1,0 +1,10 @@
+- id: llm-prompt-radar
+  name: LLM Prompt Radar
+  description: Detect risky changes to LLM prompts and AI configuration before they ship
+  entry: llm-prompt-radar
+  language: python
+  language_version: python3
+  args: ["--base", "HEAD", "--fail-on", "high"]
+  types_or: [python, yaml, toml, text]
+  pass_filenames: false
+  always_run: false

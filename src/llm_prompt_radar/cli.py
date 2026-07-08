@@ -5,7 +5,16 @@ import argparse
 import sys
 from pathlib import Path
 
-from llm_prompt_radar import prompt_analyzer, code_analyzer, config_analyzer, reporter, scanner
+from llm_prompt_radar import (
+    prompt_analyzer,
+    code_analyzer,
+    config_analyzer,
+    reporter,
+    scanner,
+    config_loader,
+    langchain_analyzer,
+    custom_rules,
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -30,12 +39,23 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Write llm-radar-badge.svg to repo root.",
     )
+    parser.add_argument(
+        "--config",
+        default=None,
+        help="Path to a custom config file (.promptradar.yml or .promptradar.toml). "
+             "Defaults to auto-detection from repo root.",
+    )
     return parser
 
 
 def main() -> None:
     args = build_parser().parse_args()
     repo_path = Path(args.repo).resolve()
+
+    # Load and merge config file values (CLI args win over config file defaults)
+    config_file = Path(args.config).resolve() if args.config else None
+    config = config_loader.load_config(repo_path, config_file=config_file)
+    args = config_loader.merge_config_with_args(config, args)
 
     changed_files = scanner.git_changed_files(repo_path, args.base)
     deleted_files = scanner.git_deleted_files(repo_path, args.base)
@@ -49,6 +69,18 @@ def main() -> None:
     findings.extend(
         config_analyzer.analyze_config_files(repo_path, changed_files, args.base, diff_text)
     )
+
+    # LangChain / LlamaIndex SDK analysis
+    findings.extend(
+        langchain_analyzer.analyze_langchain_files(repo_path, changed_files, args.base, diff_text)
+    )
+
+    # Custom rules from config file
+    user_rules = config.get("custom-rules", [])
+    if user_rules:
+        findings.extend(
+            custom_rules.apply_custom_rules(user_rules, diff_text, changed_files)
+        )
 
     report = scanner.summarize(findings, changed_files, repo_path)
 

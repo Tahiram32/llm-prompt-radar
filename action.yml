@@ -1,5 +1,5 @@
 name: LLM Prompt Radar
-description: Detect risky changes to LLM prompts and AI configuration before they ship to production
+description: Detect risky changes to LLM prompts and AI configuration before they ship to production. Supports optional PR comment posting (requires issues write permission).
 author: Tahiram32
 
 branding:
@@ -27,6 +27,10 @@ inputs:
     description: Emit a shields.io badge URL as a step output
     required: false
     default: "false"
+  post-comment:
+    description: Post a PR comment with the risk summary (requires pull_request event and issues write permission)
+    required: false
+    default: "false"
 
 outputs:
   risk-level:
@@ -35,6 +39,9 @@ outputs:
   badge-url:
     description: shields.io badge URL (only populated when badge=true)
     value: ${{ steps.run.outputs.badge-url }}
+  markdown-summary:
+    description: The full markdown report table
+    value: ${{ steps.run.outputs.markdown-summary }}
 
 runs:
   using: composite
@@ -68,7 +75,47 @@ runs:
         echo "risk-level=${RISK_LEVEL}" >> "$GITHUB_OUTPUT"
         echo "badge-url=${BADGE_URL}"   >> "$GITHUB_OUTPUT"
 
+        MARKDOWN_SUMMARY=$(llm-prompt-radar \
+          --repo "${{ inputs.repo }}" \
+          --base "${{ inputs.base-ref }}" \
+          --format markdown \
+          --fail-on none 2>/dev/null || true)
+        echo "markdown-summary<<EOF" >> "$GITHUB_OUTPUT"
+        echo "$MARKDOWN_SUMMARY" >> "$GITHUB_OUTPUT"
+        echo "EOF" >> "$GITHUB_OUTPUT"
+
         # Write step summary
         echo "$OUTPUT" >> "$GITHUB_STEP_SUMMARY"
 
         exit $EXIT_CODE
+
+    - name: Post PR comment
+      if: ${{ inputs.post-comment == 'true' && github.event_name == 'pull_request' }}
+      uses: actions/github-script@v7
+      env:
+        RADAR_SUMMARY: ${{ steps.run.outputs.markdown-summary }}
+      with:
+        script: |
+          const marker = '<!-- llm-prompt-radar -->';
+          const body = marker + '\n' + process.env.RADAR_SUMMARY;
+          const { data: comments } = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+          });
+          const existing = comments.find(c => c.body.startsWith(marker));
+          if (existing) {
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: existing.id,
+              body,
+            });
+          } else {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
+          }

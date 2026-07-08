@@ -54,7 +54,7 @@ jobs:
         with:
           fetch-depth: 0          # full history required for diffing
 
-      - uses: Tahiram32/llm-prompt-radar@v0.1.0
+      - uses: Tahiram32/llm-prompt-radar@v0.2.0
         with:
           base-ref: origin/main   # ref to diff against
           format: github          # emit GitHub PR annotations
@@ -91,6 +91,70 @@ llm-prompt-radar --help
 
 When used as a **GitHub Action**, these map 1-to-1 to `inputs:` in your workflow YAML.
 
+### YAML Config File (`.promptradar.yml`)
+
+Place a `.promptradar.yml` in your repo root to set defaults without CLI flags:
+
+```yaml
+fail-on: high
+format: github
+base-ref: origin/main
+
+custom-rules:
+  - id: no-api-keys
+    description: "Catch accidental API key commits in prompts"
+    severity: critical
+    pattern: "sk-[a-zA-Z0-9]{32,}"
+
+ignore:
+  - "tests/fixtures/**"
+  - "docs/**"
+```
+
+### Custom Rules
+
+Define your own regex-based rules in `.promptradar.yml` under `custom-rules`. Each rule is applied against all added lines in the diff:
+
+```yaml
+custom-rules:
+  - id: no-jailbreak-phrases
+    description: "Detect common jailbreak phrases added to prompts"
+    severity: high
+    pattern: "(?i)(ignore previous instructions|you are now|pretend you are)"
+```
+
+### PR Comments
+
+Enable automatic PR comment posting by adding `post-comment: "true"` to your action inputs. Requires `pull_request_target` or `pull_request` event and `issues: write` permission:
+
+```yaml
+- uses: Tahiram32/llm-prompt-radar@v0.2.0
+  with:
+    post-comment: "true"
+  permissions:
+    issues: write
+    pull-requests: write
+```
+
+### Pre-commit Hook
+
+Add to your `.pre-commit-config.yaml`:
+
+```yaml
+repos:
+  - repo: https://github.com/Tahiram32/llm-prompt-radar
+    rev: v0.2.0
+    hooks:
+      - id: llm-prompt-radar
+```
+
+Install: `pre-commit install`
+
+### VS Code Extension
+
+Search for **"LLM Prompt Radar"** in the VS Code Extension Marketplace, or run:
+- `Ctrl+Shift+P` → `LLM Prompt Radar: Scan Repository`
+
 ---
 
 ## 🔬 How It Works
@@ -115,12 +179,12 @@ llm-prompt-radar analyses your diff through four independent layers:
 - [x] LLM parameter change tracking
 - [x] GitHub Action composite workflow
 - [x] SARIF output for GitHub Code Scanning
-- [ ] YAML/TOML config file support (`.promptradar.yml`)
-- [ ] LangChain and LlamaIndex SDK support
-- [ ] PR comment posting with risk summary table
-- [ ] Custom rule definitions (bring-your-own regex)
-- [ ] VS Code extension
-- [ ] Pre-commit hook integration
+- [x] YAML/TOML config file support (`.promptradar.yml`)
+- [x] LangChain and LlamaIndex SDK support
+- [x] PR comment posting with risk summary table
+- [x] Custom rule definitions (bring-your-own regex)
+- [x] VS Code extension
+- [x] Pre-commit hook integration
 
 ---
 

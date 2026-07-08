@@ -1,0 +1,66 @@
+{
+  "name": "llm-prompt-radar",
+  "displayName": "LLM Prompt Radar",
+  "description": "Detect risky changes to LLM prompts and AI config in VS Code",
+  "version": "0.1.0",
+  "publisher": "Tahiram32",
+  "engines": { "vscode": "^1.85.0" },
+  "categories": ["Linters", "Other"],
+  "keywords": ["llm", "prompt", "ai", "safety", "openai", "anthropic"],
+  "icon": "images/icon.png",
+  "activationEvents": ["onLanguage:python", "onLanguage:yaml", "onLanguage:toml"],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "llmPromptRadar.runScan",
+        "title": "LLM Prompt Radar: Scan Current File"
+      },
+      {
+        "command": "llmPromptRadar.runFullScan",
+        "title": "LLM Prompt Radar: Scan Repository"
+      }
+    ],
+    "configuration": {
+      "title": "LLM Prompt Radar",
+      "properties": {
+        "llmPromptRadar.baseRef": {
+          "type": "string",
+          "default": "origin/main",
+          "description": "Git ref to diff against"
+        },
+        "llmPromptRadar.failOn": {
+          "type": "string",
+          "enum": ["none", "low", "medium", "high", "critical"],
+          "default": "high",
+          "description": "Minimum risk level to surface as a VS Code error"
+        },
+        "llmPromptRadar.executablePath": {
+          "type": "string",
+          "default": "llm-prompt-radar",
+          "description": "Path to the llm-prompt-radar CLI executable"
+        }
+      }
+    },
+    "menus": {
+      "editor/context": [
+        {
+          "command": "llmPromptRadar.runScan",
+          "when": "editorLangId == python || editorLangId == yaml",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "@vscode/vsce": "^2.0.0"
+  }
+}
