@@ -1,0 +1,74 @@
+name: LLM Prompt Radar
+description: Detect risky changes to LLM prompts and AI configuration before they ship to production
+author: Tahiram32
+
+branding:
+  icon: shield
+  color: purple
+
+inputs:
+  repo:
+    description: Path to the repository root to analyse
+    required: false
+    default: ${{ github.workspace }}
+  base-ref:
+    description: Git ref to diff against (e.g. origin/main)
+    required: false
+    default: origin/main
+  format:
+    description: Output format — text | json | markdown | github | sarif
+    required: false
+    default: markdown
+  fail-on:
+    description: Minimum risk level that causes a non-zero exit — none | low | medium | high | critical
+    required: false
+    default: high
+  badge:
+    description: Emit a shields.io badge URL as a step output
+    required: false
+    default: "false"
+
+outputs:
+  risk-level:
+    description: Highest risk level found — none | low | medium | high | critical
+    value: ${{ steps.run.outputs.risk-level }}
+  badge-url:
+    description: shields.io badge URL (only populated when badge=true)
+    value: ${{ steps.run.outputs.badge-url }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Python 3.13
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.13"
+
+    - name: Install llm-prompt-radar
+      shell: bash
+      run: pip install llm-prompt-radar
+
+    - name: Run llm-prompt-radar
+      id: run
+      shell: bash
+      run: |
+        set +e
+        OUTPUT=$(llm-prompt-radar \
+          --repo "${{ inputs.repo }}" \
+          --base-ref "${{ inputs.base-ref }}" \
+          --format "${{ inputs.format }}" \
+          --fail-on "${{ inputs.fail-on }}" \
+          ${{ inputs.badge == 'true' && '--badge' || '' }})
+        EXIT_CODE=$?
+
+        # Parse outputs from last lines of stdout (key=value pairs)
+        RISK_LEVEL=$(echo "$OUTPUT" | grep -E '^risk-level=' | tail -1 | cut -d= -f2)
+        BADGE_URL=$(echo "$OUTPUT" | grep -E '^badge-url=' | tail -1 | cut -d= -f2)
+
+        echo "risk-level=${RISK_LEVEL}" >> "$GITHUB_OUTPUT"
+        echo "badge-url=${BADGE_URL}"   >> "$GITHUB_OUTPUT"
+
+        # Write step summary
+        echo "$OUTPUT" >> "$GITHUB_STEP_SUMMARY"
+
+        exit $EXIT_CODE
