@@ -1,5 +1,5 @@
 name: LLM Prompt Radar
-description: Detect risky changes to LLM prompts and AI configuration before they ship to production. Supports optional PR comment posting (requires issues write permission).
+description: Detect risky LLM prompt changes before they ship — custom rules, LangChain support, and PR comment posting.
 author: Tahiram32
 
 branding:
